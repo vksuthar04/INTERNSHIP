@@ -1,0 +1,86 @@
+ QUERY 1: https://www.hackerrank.com/challenges/weather-observation-station-8/problem
+
+       -SELECT Distinct CITY 
+        FROM STATION 
+        WHERE lower(substr(CITY, 1, 1)) in ('a', 'e', 'i', 'o', 'u') and lower(substr(CITY, length(CITY), 1)) in ('a', 'e', 'i', 'o', 'u'); 
+
+
+ QUERY 2:https://www.hackerrank.com/challenges/population-density-difference/problem
+
+      -SELECT MAX(Population) - MIN(Population) AS PopulationDensityDifference 
+       FROM City;
+
+
+ QUERY 3:https://www.hackerrank.com/challenges/weather-observation-station-19/problem
+
+      -select cast(round(sqrt(power(min(lat_n)-max(lat_n),2)+power(min(long_w)-max(long_w),2)),4) as numeric(7,4))
+       from station;
+
+
+ QUERY 4:https://www.hackerrank.com/challenges/weather-observation-station-20/problem
+
+      -SET @rowIndex := -1;
+       SELECT ROUND(AVG(t.LAT_N),4) FROM
+       (SELECT @rowIndex:= @rowIndex+1 AS rowIndex, s.LAT_N from STATION AS s ORDER BY s.LAT_N) AS t
+       where t.rowIndex in (floor(@rowIndex/2), ceil(@rowIndex/2));
+
+
+ QUERY 5:https://www.hackerrank.com/challenges/african-cities/problem
+
+       -SELECT city.NAME
+        FROM city
+        INNER JOIN country
+        ON city.CountryCode = country.Code
+        WHERE country.continent = 'Africa'  
+  
+ QUERY 6:https://www.hackerrank.com/challenges/african-cities/problem
+     
+      -SELECT city.NAME
+        FROM city
+        INNER JOIN country
+        ON city.CountryCode = country.Code
+        WHERE country.continent = 'Africa' 
+
+ QUERY 7:https://www.hackerrank.com/challenges/the-report/problem
+     
+      -SELECT CASE 
+	WHEN Grades.Grade < 8 THEN 'NULL' 
+	ELSE Students.Name 
+	END 
+       , Grades.Grade, Students.Marks 
+       FROM Students, Grades 
+       WHERE Students.Marks >= Grades.Min_mark AND Students.Marks <= Grades.Max_mark 
+       ORDER BY Grades.Grade DESC, Students.Name;
+
+ QUERY 8:https://www.hackerrank.com/challenges/full-score/problem
+ 
+       -select h.hacker_id, h.name from Submissions as s join Hackers as h 
+        on s.hacker_id = h.hacker_id 
+        join Challenges as c on s.challenge_id = c.challenge_id
+        join Difficulty as d on c.Difficulty_level = d.Difficulty_level
+        where s.score = d.score 
+        group by h.hacker_id, h.name 
+        having count(*) > 1
+        order by count(*) desc, h.hacker_id;
+
+QUERY 9:https://www.hackerrank.com/challenges/harry-potter-and-wands/problem
+
+      -select w.id, p.age, w.coins_needed, w.power from Wands as w 
+       join Wands_Property as p
+       on w.code = p.code
+       where w.coins_needed = (select min(coins_needed)
+                       from Wands w2 inner join Wands_Property p2 
+                       on w2.code = p2.code 
+                       where p2.is_evil = 0 and p.age = p2.age and w.power = w2.power)
+       order by w.power desc, p.age desc;
+
+QUERY 10:https://www.hackerrank.com/challenges/contest-leaderboard/problem
+ 
+     -select m.hacker_id, h.name, sum(score) as total_score from
+      (select hacker_id, challenge_id, max(score) as score
+      from Submissions group by hacker_id, challenge_id) as m
+      join Hackers as h
+      on m.hacker_id = h.hacker_id
+      group by m.hacker_id, h.name
+      having total_score > 0
+      order by total_score desc, m.hacker_id;
