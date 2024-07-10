@@ -1,0 +1,132 @@
+
+ Advance Concept
+
+
+-Copy data from Database to CSV,Parquet and Avro File Format
+
+I. Data Transfer to CSV, Parquet, and Avro
+
+A. Python with Apache Spark (Scalable for Large Datasets):
+
+# Libraries:
+
+import pyspark.sql.functions as F
+from pyspark.sql import SparkSession
+
+# SparkSession Creation:
+
+spark = SparkSession.builder \
+    .appName("DataTransfer") \
+    .getOrCreate()
+
+# Data Loading:
+
+def load_data(source_db, source_table):
+    df = spark.read.format("jdbc") \
+        .option("url", "jdbc:your_database_url") \
+        .option("driver", "your_database_driver") \
+        .option("user", "your_username") \
+        .option("password", "your_password") \
+        .option("dbtable", f"{source_db}.{source_table}") \
+        .load()
+    return df
+
+# Data Transformation (Optional):
+
+# Example: Filter specific columns
+df = df.select("column1", "column2")
+
+# Example: Rename columns
+df = df.withColumnRenamed("old_name", "new_name")
+
+# Data Saving:
+
+def save_data(df, format, path):
+    df.write.format(format) \
+        .option("header", True) \
+        .save(path)
+
+# Save to CSV
+save_data(df, "csv", "data.csv")
+
+# Save to Parquet
+save_data(df, "parquet", "data.parquet")
+
+# Save to Avro
+save_data(df, "avro", "data.avro")
+
+II. Schedule and Event Triggers
+
+A. Apache Airflow (Open-Source Workflow Management System):
+
+# DAG Definition:
+
+from airflow import DAG
+from airflow.providers.cncf.sensors.kubernetes import KubernetesPodSensor
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
+with DAG(
+    dag_id="data_transfer_pipeline",
+    schedule_interval="@daily",  # Adjust as needed
+    start_date=datetime(2024, 7, 11),  # Start date
+) as dag:
+
+    # KubernetesPodSensor to wait for database readiness (optional)
+    database_ready = KubernetesPodSensor(
+        task_id="wait_for_database",
+        pod_name="database-pod",  # Replace with your pod name
+        namespace="your-namespace",  # Replace with your namespace
+    )
+
+    # SparkSubmitOperator to execute data transfer script
+    data_transfer = SparkSubmitOperator(
+        task_id="data_transfer",
+        application="/path/to/your/data_transfer_script.py",  # Replace with your script path
+        conn_id="your_spark_connection",  # Replace with your connection ID
+        parameters=["source_db=your_database", "source_table=your_table", "format=csv"]  # Add more parameters as needed
+    )
+
+    # Set dependencies
+    database_ready >> data_transfer
+
+III. Copy All Tables from One Database to Another
+
+# Spark DataFrame Approach:
+
+def copy_all_tables(source_db, target_db):
+    for table in spark.catalog.listTables(source_db):
+        df = spark.read.format("jdbc") \
+            .option("url", "jdbc:your_database_url") \
+            .option("driver", "your_database_driver") \
+            .option("user", "
+
+
+Iv Using a SELECT query with column mapping (SQL):
+
+-- Replace with actual connection details
+CREATE PROCEDURE CopyTables (
+  @sourceDB varchar(50),
+  @sourceTable varchar(50),
+  @targetDB varchar(50),
+  @targetTable varchar(50),
+  @columnsToCopy varchar(200) -- Comma-separated list of columns
+)
+AS
+BEGIN
+  -- Build the SELECT statement dynamically
+  DECLARE @query NVARCHAR(MAX);
+  SET @query = N'SELECT ' + @columnsToCopy + N' FROM ' + @sourceDB + N'.' + @sourceTable;
+
+  -- Execute the query and insert into target table
+  INSERT INTO [' + @targetDB + N'].[' + @targetTable + N'] (
+    -- List target columns matching source columns (optional)
+  )
+  EXEC sp_executesql @query;
+END;
+
+-- Example usage
+EXEC CopyTables 'source_db', 'source_table', 'target_db', 'target_table', 'column1, column3';
+
+
+
+
