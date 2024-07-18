@@ -1,0 +1,58 @@
+##PARAMETER
+
+{
+  "name": "baseDataPath",
+  "type": "String",
+  "defaultValue": "your/base/folder/path"
+}
+
+
+##PIPELINE ACTIVITES
+
+{
+  "name": "OrganizeAndTransformFiles",
+  "properties": {
+    "activities": [
+      {
+        "name": "ListFiles",
+        "type": "WebActivity",
+        "properties": {
+          "url": "@concat('https://', dataset().location, '.blob.core.windows.net/', containerName(), '/list?prefix=', variables('baseDataPath'))",
+          "authentication": "ManagedIdentity",
+          "headers": {
+            "x-ms-version": "2020-02-10"
+          },
+          "method": "GET",
+          "output": {
+            "type": "Expression",
+            "expression": "@list(split(outputs('ListFiles'),'\n'))"
+          }
+        }
+      },
+      {
+        "name": "ForEachFile",
+        "type": "ForEach",
+        "properties": {
+          "items": "@outputs('ListFiles')",
+          "activities": [
+            {
+              "name": "ParseFileName",
+              "type": "SetVariable",
+              "properties": {
+                "variableName": "fileName",
+                "value": "@item.split('/')[2]"
+              }
+            },
+            {
+              "name": "ExtractDate",
+              "type": "SetVariable",
+              "properties": {
+                "variableName": "extractedDate",
+                "value": "@regex(substring(variables('fileName'), 11, 8), '\\d{8}')"
+              }
+            },
+            {
+              "name": "MoveFile",
+              "type": "Copy",
+              "properties": {
+                "source": {
