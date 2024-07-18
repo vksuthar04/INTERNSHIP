@@ -1,0 +1,193 @@
+1- Configure Self-hosted integration runtime to Extract the data from your local server and load it into azure DB
+
+{
+    "name": "MyPipeline",
+    "properties": {
+        "activities": [
+            {
+                "name": "ExtractFromLocal",
+                "type": "SqlServerSource",
+                "properties": {
+                    "connectionString": "Server=your_local_server;Database=your_local_database;User ID=your_username;Password=your_password",
+                    "sqlReaderQuery": "SELECT * FROM your_table" // Replace with your actual query
+                }
+            },
+            {
+                "name": "LoadToAzureSql",
+                "type": "AzureSqlSink",
+                "properties": {
+                    "connectionString": "Server=your_azure_sql_server;Database=your_azure_database;User ID=your_azure_username;Password=your_azure_password",
+                    "writeBatchSize": 10000 // Adjust as needed
+                }
+            }
+        ],
+        "connections": {
+            "your_local_server_connection": {
+                "type": "SqlServer",
+                "connectionString": "Server=your_local_server;Database=your_local_database;User ID=your_username;Password=your_password"
+            },
+            "your_azure_sql_connection": {
+                "type": "AzureSql",
+                "connectionString": "Server=your_azure_sql_server;Database=your_azure_database;User ID=your_azure_username;Password=your_azure_password"
+            }
+        }
+    }
+}
+
+
+
+
+2-Configure FTP/ SFTP server and create a ADF pipeline for data extraction
+
+{
+    "name": "ExtractFromFtpServer",
+    "properties": {
+        "activities": [
+            {
+                "name": "GetFileList",
+                "type": "GetMetadata",
+                "properties": {
+                    "linkedServiceName": "yourFtpSftpLinkedService",
+                    "folderPath": "your/data/folder",
+                    "recursive": true  // Set to true to get files from subfolders
+                }
+            },
+            {
+                "name": "ForEachFile",
+                "type": "ForEach",
+                "properties": {
+                    "items": "@activity('GetFileList').output.fileList",
+                    "activities": [
+                        {
+                            "name": "CopyFromFtp",
+                            "type": "Copy",
+                            "properties": {
+                                "source": {
+                                    "type": "FtpSource",
+                                    "filePath": "@item().path"
+                                },
+                                "sink": {
+                                    "type": "AzureSqlSink",
+                                    "linkedServiceName": "yourAzureDatabaseLinkedService",
+                                    "table": "your_destination_table"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
+  
+ 
+
+
+3-Create Incremental load pipeline and automate this on daily basis
+
+{
+    "name": "IncrementalFtpExtract",
+    "properties": {
+        "activities": [
+            {
+                "name": "GetLastWatermark",
+                "type": "Lookup",
+                "properties": {
+                    "source": "yourWatermarkLookupSource",  // Replace with your source
+                    "dataset": "yourWatermarkDataset",      // Replace with your dataset
+                    "sink": {
+                        "type": "Variable",
+                        "variableName": "watermark"
+                    }
+                }
+            },
+            {
+                "name": "CopyFromFtp",
+                "type": "Copy",
+                "properties": {
+                    "source": {
+                        "type": "FtpSource",
+                        "filePath": "your/data/folder/*.csv",  // Replace with your file pattern
+                        "filter": "@item().LastModifiedDate > int(@watermark)"
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "linkedServiceName": "yourAzureDatabaseLinkedService",
+                        "table": "your_destination_table"
+                    }
+                }
+            }
+        ],
+        "triggers": [
+            {
+                "name": "DailyTrigger",
+                "type": "ScheduleTrigger",
+                "properties": {
+                    "schedule": {
+                        "frequency": "Day",
+                        "interval": 1  // Daily execution
+                    },
+                    "startTime": "02:00:00"  // Set your desired start time
+                }
+            }
+        ]
+    }
+}
+
+
+
+
+4-Automate a pipline to trigger every last Saturday of the month
+
+from datetime import date, timedelta
+
+# Get the current date
+today = date.today()
+
+# Check if it's Saturday
+is_saturday = today.weekday() == 5
+
+# Calculate the last day of the current month
+last_day_of_month = today.replace(day = 28) + timedelta(days = (calendar.monthrange(today.year, today.month)[1] - today.day))
+
+# Check if it's the last Saturday of the month
+is_last_saturday = is_saturday and (today == last_day_of_month)
+
+# Proceed with data processing activities only if it's the last Saturday
+if is_last_saturday:
+    # Your data processing activities here
+    # (e.g., call copy activity, data transformation etc.)
+    pass
+else:
+    # Optional: Log a message indicating it's not the last Saturday
+    print("Pipeline triggered, but not the last Saturday. Skipping data processing.")
+
+
+
+
+5-Retrieving data. Wait a few seconds and try to cut or copy again.
+import requests
+from bs4 import BeautifulSoup
+
+# Replace with the URL you want to extract data from
+url = "https://www.example.com/data_page"
+
+# Make a GET request to the URL
+response = requests.get(url)
+
+# Parse the HTML content
+soup = BeautifulSoup(response.content, 'html.parser')
+
+# Find the element containing the desired data (adjust selectors as needed)
+data_element = soup.find('table', class_='data-table')  # Replace with appropriate selectors
+
+# Extract data from the element (modify logic based on your data structure)
+extracted_data = []
+for row in data_element.find_all('tr'):
+    row_data = []
+    for cell in row.find_all('td'):
+        row_data.append(cell.text.strip())
+    extracted_data.append(row_data)
+
+# Use the extracted_data for further processing or saving
+print(extracted_data)
